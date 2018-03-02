@@ -31,11 +31,15 @@ impl<T> SegmentList<T> {
 }
 
 
-pub fn radix_sort_32<V: Copy+Default, F: Fn(&V)->u32>(data: &mut Vec<Vec<V>>, free: &mut Vec<Vec<V>>, func: &F) {
+pub fn radix_sort_64<V: Copy+Default, F: Fn(&V)->u64>(data: &mut Vec<Vec<V>>, free: &mut Vec<Vec<V>>, func: &F) {
     radix_shuf(data, free, &|x| ((func(x) >>  0) & 0xFF) as u8);
     radix_shuf(data, free, &|x| ((func(x) >>  8) & 0xFF) as u8);
     radix_shuf(data, free, &|x| ((func(x) >> 16) & 0xFF) as u8);
     radix_shuf(data, free, &|x| ((func(x) >> 24) & 0xFF) as u8);
+    radix_shuf(data, free, &|x| ((func(x) >> 32) & 0xFF) as u8);
+    radix_shuf(data, free, &|x| ((func(x) >> 40) & 0xFF) as u8);
+    radix_shuf(data, free, &|x| ((func(x) >> 48) & 0xFF) as u8);
+    radix_shuf(data, free, &|x| ((func(x) >> 56) & 0xFF) as u8);
 }
 
 pub fn radix_shuf<V: Copy+Default, F: Fn(&V)->u8>(data: &mut Vec<Vec<V>>, free: &mut Vec<Vec<V>>, func: &F) {

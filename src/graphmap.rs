@@ -2,12 +2,12 @@ use typedrw::TypedMemoryMap;
 
 pub struct GraphMMap {
     nodes: TypedMemoryMap<u64>,
-    edges: TypedMemoryMap<u32>,
+    edges: TypedMemoryMap<u64>,
 }
 
 impl GraphMMap {
     pub fn nodes(&self) -> usize { self.nodes[..].len() }
-    pub fn edges(&self, node: usize) -> &[u32] {
+    pub fn edges(&self, node: usize) -> &[u64] {
         let nodes = &self.nodes[..];
         if node + 1 < nodes.len() {
             let start = nodes[node] as usize;

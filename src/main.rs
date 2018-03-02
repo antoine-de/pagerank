@@ -11,7 +11,7 @@ mod typedrw;
 mod graphmap;
 mod sorting;
 use graphmap::GraphMMap;
-use sorting::{SegmentList, radix_sort_32};
+use sorting::{SegmentList, radix_sort_64};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -68,12 +68,12 @@ fn main () {
 
             let mut input = root.dataflow(|builder| {
 
-                let (input, edges) = builder.new_input::<(u32, u32)>();
-                let (cycle, ranks) = builder.loop_variable::<(u32, f32)>(max_iterations, 1);
+                let (input, edges) = builder.new_input::<(u64, u64)>();
+                let (cycle, ranks) = builder.loop_variable::<(u64, f32)>(max_iterations, 1);
 
                 let mut ranks = edges.binary_notify(&ranks,
-                                    Exchange::new(|x: &(u32,u32)| x.0 as u64),
-                                    Exchange::new(|x: &(u32,f32)| x.0 as u64),
+                                    Exchange::new(|x: &(u64,u64)| x.0 as u64),
+                                    Exchange::new(|x: &(u64,f32)| x.0 as u64),
                                     "pagerank",
                                     vec![RootTimestamp::new(0)],
                                     move |input1, input2, output, notificator| {
@@ -150,7 +150,7 @@ fn main () {
                     let local_index = index % workers;
                     let mut acc = vec![0.0; (nodes / workers) + 1];   // holds ranks
                     ranks = ranks.unary_notify(
-                        Exchange::new(move |x: &(u32,f32)| (local_base as u64 + (x.0 as u64 % workers as u64))),
+                        Exchange::new(move |x: &(u64,f32)| (local_base as u64 + (x.0 as u64 % workers as u64))),
                         "aggregation",
                         vec![],
                         move |input, output, iterator| {
@@ -166,7 +166,7 @@ fn main () {
                                       .give_iterator(acc.drain(..)
                                                         .enumerate()
                                                         .filter(|x| x.1 != 0.0)
-                                                        .map(|(u,f)| ((u * workers + local_index) as u32, f)));
+                                                        .map(|(u,f)| ((u * workers + local_index) as u64, f)));
 
                                 for _ in 0..(1 + (nodes/workers)) { acc.push(0.0); }
                             });
@@ -186,7 +186,7 @@ fn main () {
                 for node in 0..graph.nodes() {
                     if node % peers == index {
                         for dst in graph.edges(node) {
-                            input.send(((node + 1) as u32, *dst as u32));
+                            input.send(((node + 1) as u64, *dst as u64));
                         }
                     }
                 }
@@ -204,7 +204,7 @@ fn main () {
 }
 
 // returns [src/peers] degrees, (dst, deg) pairs, and a list of [src/peers] endpoints
-fn transpose(mut edges: Vec<Vec<(u32, u32)>>, peers: usize, nodes: usize) -> (Vec<u32>, Vec<(u32, u32)>, Vec<u32>)  {
+fn transpose(mut edges: Vec<Vec<(u64, u64)>>, peers: usize, nodes: usize) -> (Vec<u64>, Vec<(u64, u64)>, Vec<u64>)  {
 
     let mut deg = vec![0; (nodes as usize / peers) + 1];
     for list in &edges {
@@ -213,20 +213,20 @@ fn transpose(mut edges: Vec<Vec<(u32, u32)>>, peers: usize, nodes: usize) -> (Ve
         }
     }
 
-    radix_sort_32(&mut edges, &mut Vec::new(), &|&(_,d)| d);
+    radix_sort_64(&mut edges, &mut Vec::new(), &|&(_,d)| d);
 
-    let mut rev = Vec::<(u32,u32)>::with_capacity(deg.len());
+    let mut rev = Vec::<(u64,u64)>::with_capacity(deg.len());
     let mut trn = Vec::with_capacity(edges.len() * 1024);
     for list in edges {
         for (s,d) in list {
             let len = rev.len();
             if (len == 0) || (rev[len-1].0 < d) {
-                rev.push((d, 0u32));
+                rev.push((d, 0u64));
             }
 
             let len = rev.len();
             rev[len-1].1 += 1;
-            trn.push(s / peers as u32);
+            trn.push(s / peers as u64);
         }
     }
 
